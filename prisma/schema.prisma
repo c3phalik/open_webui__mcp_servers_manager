@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MCPServerType {
+  Local
+  Remote
+}
+
+enum RemoteServerType {
+  sse
+  streamable_http @map("streamable-http")
+}
+
+model McpServer {
+  id               String            @id @default(uuid())
+  name             String            @unique
+  mcpServerUniqueId String           @unique @map("mcp_server_unique_id")
+  type             MCPServerType
+  
+  // For Local (command) servers
+  command          String?           // "npx" or "uvx"
+  args             Json?             // Array of arguments
+  
+  // For Remote servers
+  remoteServerType RemoteServerType? @map("remote_server_type")
+  url              String?
+  headers          Json?             // Object with header key-value pairs
+  
+  // Metadata
+  enabled          Boolean           @default(true)
+  shareWithWorkspace Boolean          @default(false) @map("share_with_workspace")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
