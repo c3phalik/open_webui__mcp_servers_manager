@@ -23,6 +23,7 @@ import {
   Filter
 } from 'lucide-react'
 import { toast } from "sonner"
+import MCPOStatusCompact from "./mcpo-status-compact"
 
 interface ServerConfig {
   command?: string
@@ -141,6 +142,11 @@ export default function ServersList({ initialConfig, servers }: Props) {
               </Button>
             </div>
           </div>
+        </div>
+
+        {/* MCPO Status Section */}
+        <div className="mb-8 max-w-md">
+          <MCPOStatusCompact />
         </div>
 
         {/* Search and Filter Bar */}

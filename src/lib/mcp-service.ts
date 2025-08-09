@@ -2,6 +2,12 @@ import { prisma } from './prisma'
 import { MCPServerType, RemoteServerType } from '@prisma/client'
 import { generateUniqueId } from './slug-utils'
 
+// Dynamic import to avoid circular dependency
+const getMCPOManager = async () => {
+  const { default: mcpoManager } = await import('./mcpo-manager')
+  return mcpoManager
+}
+
 export type MCPServerConfig = 
   | {
       command: "npx" | "uvx" | "npm"
@@ -26,6 +32,18 @@ export interface MCPServersConfig {
 }
 
 export class MCPService {
+  // Helper method to restart MCPO after database changes
+  private static async restartMCPO() {
+    try {
+      const mcpoManager = await getMCPOManager()
+      // Fire and forget - don't wait for restart to complete
+      mcpoManager.restart().catch(error => {
+        console.error('Failed to restart MCPO after database change:', error)
+      })
+    } catch (error) {
+      console.error('Failed to get MCPO manager for restart:', error)
+    }
+  }
   static async getAllServers(): Promise<MCPServersConfig> {
     const servers = await prisma.mcpServer.findMany({
       where: { enabled: true },
@@ -36,12 +54,12 @@ export class MCPService {
 
     for (const server of servers) {
       if (server.type === MCPServerType.Local) {
-        mcpServers[server.name] = {
+        mcpServers[server.mcpServerUniqueId] = {
           command: server.command as "npx" | "uvx" | "npm",
           args: (server.args as string[]) || []
         }
       } else if (server.type === MCPServerType.Remote) {
-        mcpServers[server.name] = {
+        mcpServers[server.mcpServerUniqueId] = {
           type: server.remoteServerType === RemoteServerType.sse ? 'sse' : 'streamable-http',
           url: server.url!,
           ...(server.headers ? { headers: server.headers as Record<string, string> } : {})
@@ -141,6 +159,9 @@ export class MCPService {
       data: { mcpServerUniqueId: uniqueId }
     })
 
+    // Restart MCPO after creating server
+    this.restartMCPO()
+
     return {
       id: updatedServer.id,
       name: updatedServer.name,
@@ -192,6 +213,9 @@ export class MCPService {
       }
     })
 
+    // Restart MCPO after updating server
+    this.restartMCPO()
+
     return {
       id: updatedServer.id,
       name: updatedServer.name,
@@ -202,15 +226,25 @@ export class MCPService {
   }
 
   static async deleteServer(uniqueId: string) {
-    return await prisma.mcpServer.delete({
+    const result = await prisma.mcpServer.delete({
       where: { mcpServerUniqueId: uniqueId }
     })
+
+    // Restart MCPO after deleting server
+    this.restartMCPO()
+
+    return result
   }
 
   static async deleteServerByName(name: string) {
-    return await prisma.mcpServer.delete({
+    const result = await prisma.mcpServer.delete({
       where: { name }
     })
+
+    // Restart MCPO after deleting server
+    this.restartMCPO()
+
+    return result
   }
 
   static async replaceAllServers(config: MCPServersConfig) {
@@ -245,5 +279,8 @@ export class MCPService {
         })
       }
     })
+
+    // Restart MCPO after replacing all servers
+    this.restartMCPO()
   }
 }

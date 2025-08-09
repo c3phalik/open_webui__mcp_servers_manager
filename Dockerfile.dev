@@ -1,0 +1,42 @@
+# Simple single-stage Dockerfile for development
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install system dependencies including Python and uv
+RUN apk add --no-cache \
+    libc6-compat \
+    python3 \
+    py3-pip \
+    curl \
+    bash
+
+# Install uv for uvx support
+RUN pip3 install --break-system-packages uv
+
+# Ensure uvx is available in PATH
+ENV PATH="/root/.local/bin:$PATH"
+
+# Install dependencies
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Create tmp directory for MCPO config files
+RUN mkdir -p .tmp
+
+# Expose ports
+EXPOSE 3000
+EXPOSE 8001
+
+# Set environment variables
+ENV PORT=3000
+ENV NODE_ENV=development
+
+# Default command for development
+CMD ["npm", "run", "dev"]

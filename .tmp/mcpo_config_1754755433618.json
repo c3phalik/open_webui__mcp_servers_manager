@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "saifs-server-e73be119": {
+      "type": "sse",
+      "url": "https://flows.insurge.dev/mcp/ade8f725-da1e-4154-b388-c1cf3d89fd20/sse",
+      "headers": {
+        "Authorization": "Bearer H8n9kFFaO/27rlmZqYD+FE5rrR3OOuUv6BL/Rt8Bg1Y="
+      }
+    }
+  }
+}
