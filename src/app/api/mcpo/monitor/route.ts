@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
+import { adminMiddleware } from '@/lib/auth-middleware'
 import mcpoManager, { StatusChange } from '@/lib/mcpo-manager'
 
-export async function GET(request: NextRequest) {
+export const GET = adminMiddleware(async (request: NextRequest, userContext) => {
   // Set up Server-Sent Events headers
   const headers = new Headers({
     'Content-Type': 'text/event-stream',
@@ -85,4 +86,4 @@ export async function GET(request: NextRequest) {
   })
 
   return new Response(stream, { headers })
-}
+})

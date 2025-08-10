@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { ProtectedRoute } from '@/components/auth/protected-route'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -160,20 +161,18 @@ export default function MonitorPage() {
     return `${hours}h ${minutes % 60}m`
   }
 
-  if (isLoading && !monitorData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading monitor data...</span>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto max-w-7xl px-4 py-8">
+    <ProtectedRoute requireAdmin={true}>
+      {isLoading && !monitorData ? (
+        <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Loading monitor data...</span>
+          </div>
+        </div>
+      ) : (
+        <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-background via-background to-muted/20">
+          <div className="container mx-auto max-w-7xl px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -464,7 +463,9 @@ export default function MonitorPage() {
             </Tabs>
           </>
         )}
-      </div>
-    </div>
+          </div>
+        </div>
+      )}
+    </ProtectedRoute>
   )
 }

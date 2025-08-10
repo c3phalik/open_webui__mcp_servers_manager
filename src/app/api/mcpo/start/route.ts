@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { adminMiddleware } from '@/lib/auth-middleware'
 import mcpoManager from '@/lib/mcpo-manager'
 
-export async function POST() {
+export const POST = adminMiddleware(async (request: NextRequest, userContext) => {
   try {
     await mcpoManager.start()
     
@@ -16,4 +17,4 @@ export async function POST() {
       { status: 500 }
     )
   }
-}
+})

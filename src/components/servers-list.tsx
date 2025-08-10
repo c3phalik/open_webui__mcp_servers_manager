@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import Link from "next/link"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,17 +12,16 @@ import {
   Search, 
   Server, 
   Copy, 
-  Check, 
-  ExternalLink, 
+  Check,
   Settings2, 
-  Zap,
   Command,
   Network,
-  ArrowRight,
   Filter
 } from 'lucide-react'
 import { toast } from "sonner"
+import { Loader2, Edit } from 'lucide-react'
 import MCPOStatusCompact from "./mcpo-status-compact"
+import { MCPServerModal } from "./mcp-server-modal"
 
 interface ServerConfig {
   command?: string
@@ -41,26 +39,39 @@ interface ServerWithMetadata {
   config: ServerConfig
 }
 
-interface Props {
-  initialConfig: {
-    mcpServers: Record<string, ServerConfig>
-  }
-  servers?: ServerWithMetadata[]
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface Props {}
 
-export default function ServersList({ initialConfig, servers }: Props) {
+export default function ServersList({}: Props) {
   const [searchQuery, setSearchQuery] = useState("")
   const [copiedName, setCopiedName] = useState<string | null>(null)
   const [filterType, setFilterType] = useState<"all" | "local" | "remote" | "shared">("all")
+  const [servers, setServers] = useState<ServerWithMetadata[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalMode, setModalMode] = useState<"create" | "edit">("create")
+  const [selectedServer, setSelectedServer] = useState<ServerWithMetadata | undefined>()
   
-  // Use servers prop if provided, otherwise fallback to initialConfig
-  const serversList = servers || Object.entries(initialConfig.mcpServers ?? {}).map(([name, config]) => ({
-    id: '', // No ID for legacy format
-    name,
-    uniqueId: '', // No uniqueId for legacy format  
-    shareWithWorkspace: false,
-    config
-  }))
+  useEffect(() => {
+    fetchServers()
+  }, [])
+
+  const fetchServers = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/mcp-servers')
+      if (response.ok) {
+        const data = await response.json()
+        setServers(data)
+      }
+    } catch (error) {
+      console.error('Error fetching servers:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  
+  const serversList = servers
 
   const filteredServers = useMemo(() => {
     return serversList.filter((server) => {
@@ -86,6 +97,23 @@ export default function ServersList({ initialConfig, servers }: Props) {
     setTimeout(() => setCopiedName(null), 2000)
   }
 
+  const openCreateModal = () => {
+    setModalMode("create")
+    setSelectedServer(undefined)
+    setModalOpen(true)
+  }
+
+  const openEditModal = (server: ServerWithMetadata) => {
+    setModalMode("edit")
+    setSelectedServer(server)
+    setModalOpen(true)
+  }
+
+  const handleModalSuccess = () => {
+    // Refresh server list
+    fetchServers()
+  }
+
   const stats = {
     total: serversList.length,
     local: serversList.filter(s => "command" in s.config).length,
@@ -93,8 +121,19 @@ export default function ServersList({ initialConfig, servers }: Props) {
     shared: serversList.filter(s => s.shareWithWorkspace).length
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading servers...</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto max-w-7xl px-4 py-8">
         {/* Header Section */}
         <div className="mb-8">
@@ -134,11 +173,9 @@ export default function ServersList({ initialConfig, servers }: Props) {
             </div>
             
             <div className="flex flex-col gap-3">
-              <Button asChild size="lg" className="group">
-                <Link href="/create">
-                  <Plus className="mr-2 h-5 w-5 group-hover:rotate-90 transition-transform" />
-                  Create New Server
-                </Link>
+              <Button size="lg" className="group" onClick={openCreateModal}>
+                <Plus className="mr-2 h-5 w-5 group-hover:rotate-90 transition-transform" />
+                Create New Server
               </Button>
             </div>
           </div>
@@ -218,11 +255,9 @@ export default function ServersList({ initialConfig, servers }: Props) {
                 }
               </p>
               {!searchQuery && (
-                <Button asChild>
-                  <Link href="/create">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Your First Server
-                  </Link>
+                <Button onClick={openCreateModal}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Your First Server
                 </Button>
               )}
             </CardContent>
@@ -316,13 +351,15 @@ export default function ServersList({ initialConfig, servers }: Props) {
                           <span>{Object.keys(server.config.headers).length} headers</span>
                         )}
                       </div>
-                      <Link
-                        href={`/servers/${server.uniqueId || encodeURIComponent(server.name)}`}
-                        className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditModal(server)}
+                        className="h-auto p-1 text-sm font-medium text-primary hover:text-primary/80"
                       >
+                        <Edit className="h-3 w-3 mr-1" />
                         Edit
-                        <ArrowRight className="h-3 w-3" />
-                      </Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -330,7 +367,16 @@ export default function ServersList({ initialConfig, servers }: Props) {
             })}
           </div>
         )}
+
+        {/* MCP Server Modal */}
+        <MCPServerModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          mode={modalMode}
+          server={selectedServer}
+          onSuccess={handleModalSuccess}
+        />
       </div>
-    </main>
+    </div>
   )
 }

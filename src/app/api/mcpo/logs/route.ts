@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { adminMiddleware } from '@/lib/auth-middleware'
 import mcpoManager from '@/lib/mcpo-manager'
 
-export async function GET(request: NextRequest) {
+export const GET = adminMiddleware(async (request: NextRequest, userContext) => {
   try {
     const { searchParams } = new URL(request.url)
     const limitParam = searchParams.get('limit')
@@ -48,4 +49,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { adminMiddleware } from '@/lib/auth-middleware'
 import mcpoManager from '@/lib/mcpo-manager'
 
-export async function POST(request: NextRequest) {
+export const POST = adminMiddleware(async (request: NextRequest, userContext) => {
   try {
-    // Optional: Add authentication check here
-    // const authHeader = request.headers.get('authorization')
-    // if (!authHeader || authHeader !== `Bearer ${process.env.API_KEY}`) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    // }
-
+    // Pass user context for config generation
     await mcpoManager.restart()
     
     const status = mcpoManager.getStatus()
@@ -36,4 +32,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

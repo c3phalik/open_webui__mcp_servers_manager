@@ -3,6 +3,8 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 import { Toaster } from "sonner"
+import { SessionProvider } from '@/components/auth/session-provider'
+import { Navbar } from '@/components/navbar'
 
 export const metadata: Metadata = {
   title: 'v0 App',
@@ -27,7 +29,12 @@ html {
         `}</style>
       </head>
       <body>
-        {children}
+        <SessionProvider>
+          <Navbar />
+          <main>
+            {children}
+          </main>
+        </SessionProvider>
         <Toaster richColors position="top-right" closeButton />
       </body>
     </html>

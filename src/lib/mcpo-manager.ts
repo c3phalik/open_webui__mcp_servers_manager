@@ -208,8 +208,8 @@ class MCPOManager {
   // Configuration management (public method)
   async generateConfig(): Promise<string | null> {
     try {
-      // Get all servers from database
-      const servers = await MCPService.getAllServersWithMetadata()
+      // Get ALL servers from database (admin operation - no user filtering)
+      const servers = await MCPService.getAllServersWithMetadataForAdmin()
       
       // Validate servers
       const validation = await this.validateServers(servers)
@@ -225,8 +225,8 @@ class MCPOManager {
         throw new Error('No valid servers found in configuration')
       }
 
-      // Generate config only with valid servers
-      const config = await MCPService.getAllServers()
+      // Generate config only with valid servers using admin method (all servers)
+      const config = await MCPService.getAllServersForAdmin()
       this.log(`Raw config keys: [${Object.keys(config.mcpServers).join(', ')}]`)
       this.log(`Valid server keys: [${validation.validServers.join(', ')}]`)
       

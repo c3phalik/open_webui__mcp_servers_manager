@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { MCPService } from '@/lib/mcp-service'
+import { authMiddleware } from '@/lib/auth-middleware'
 import { z } from 'zod'
 
 // Schema for server operations
@@ -40,12 +41,25 @@ const deleteServerSchema = z.object({
   uniqueId: z.string()
 })
 
-export async function POST(request: NextRequest) {
+export const GET = authMiddleware(async (request: NextRequest, userContext) => {
+  try {
+    const servers = await MCPService.getAllServersWithMetadata(userContext)
+    return NextResponse.json(servers)
+  } catch (error) {
+    console.error('Error fetching servers:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+})
+
+export const POST = authMiddleware(async (request: NextRequest, userContext) => {
   try {
     const body = await request.json()
     const { name, config, shareWithWorkspace } = createServerSchema.parse(body)
     
-    const server = await MCPService.createServer(name, config, shareWithWorkspace)
+    const server = await MCPService.createServer(name, config, shareWithWorkspace, userContext)
     return NextResponse.json(server)
   } catch (error) {
     console.error('Error creating server:', error)
@@ -60,14 +74,14 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
-export async function PUT(request: NextRequest) {
+export const PUT = authMiddleware(async (request: NextRequest, userContext) => {
   try {
     const body = await request.json()
     const { uniqueId, name, config, shareWithWorkspace } = updateServerSchema.parse(body)
     
-    const server = await MCPService.updateServer(uniqueId, name, config, shareWithWorkspace)
+    const server = await MCPService.updateServer(uniqueId, name, config, shareWithWorkspace, userContext)
     return NextResponse.json(server)
   } catch (error) {
     console.error('Error updating server:', error)
@@ -82,14 +96,14 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = authMiddleware(async (request: NextRequest, userContext) => {
   try {
     const body = await request.json()
     const { uniqueId } = deleteServerSchema.parse(body)
     
-    await MCPService.deleteServer(uniqueId)
+    await MCPService.deleteServer(uniqueId, userContext)
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting server:', error)
@@ -104,4 +118,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

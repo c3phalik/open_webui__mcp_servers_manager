@@ -24,11 +24,17 @@ export interface MCPServer {
   name: string
   uniqueId: string
   shareWithWorkspace: boolean
+  userId: string
   config: MCPServerConfig
 }
 
 export interface MCPServersConfig {
   mcpServers: Record<string, MCPServerConfig>
+}
+
+export interface UserContext {
+  userId: string
+  isAdmin: boolean
 }
 
 export class MCPService {
@@ -44,9 +50,35 @@ export class MCPService {
       console.error('Failed to get MCPO manager for restart:', error)
     }
   }
-  static async getAllServers(): Promise<MCPServersConfig> {
+  // Get authorization filter based on user context
+  private static getAuthorizationFilter(userContext?: UserContext) {
+    if (!userContext) {
+      // No user context - return only shared servers (for backward compatibility)
+      return { 
+        enabled: true,
+        shareWithWorkspace: true
+      }
+    }
+
+    if (userContext.isAdmin) {
+      // Admin can see all servers
+      return { enabled: true }
+    }
+
+    // Regular users see their own servers + shared servers
+    return {
+      enabled: true,
+      OR: [
+        { userId: userContext.userId },
+        { shareWithWorkspace: true }
+      ]
+    }
+  }
+
+  // Admin methods for MCPO operations - bypass user filtering to get ALL servers
+  static async getAllServersForAdmin(): Promise<MCPServersConfig> {
     const servers = await prisma.mcpServer.findMany({
-      where: { enabled: true },
+      where: { enabled: true }, // Only filter by enabled status
       orderBy: { name: 'asc' }
     })
 
@@ -70,10 +102,15 @@ export class MCPService {
     return { mcpServers }
   }
 
-  static async getAllServersWithMetadata(): Promise<MCPServer[]> {
+  static async getAllServersWithMetadataForAdmin(): Promise<MCPServer[]> {
     const servers = await prisma.mcpServer.findMany({
-      where: { enabled: true },
-      orderBy: { name: 'asc' }
+      where: { enabled: true }, // Only filter by enabled status
+      orderBy: { name: 'asc' },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true }
+        }
+      }
     })
 
     return servers.map(server => ({
@@ -81,6 +118,61 @@ export class MCPService {
       name: server.name,
       uniqueId: server.mcpServerUniqueId,
       shareWithWorkspace: server.shareWithWorkspace,
+      userId: server.userId,
+      config: server.type === MCPServerType.Local ? {
+        command: server.command as "npx" | "uvx" | "npm",
+        args: (server.args as string[]) || []
+      } : {
+        type: server.remoteServerType === RemoteServerType.sse ? 'sse' : 'streamable-http',
+        url: server.url!,
+        ...(server.headers ? { headers: server.headers as Record<string, string> } : {})
+      }
+    }))
+  }
+
+  static async getAllServers(userContext?: UserContext): Promise<MCPServersConfig> {
+    const servers = await prisma.mcpServer.findMany({
+      where: this.getAuthorizationFilter(userContext),
+      orderBy: { name: 'asc' }
+    })
+
+    const mcpServers: Record<string, MCPServerConfig> = {}
+
+    for (const server of servers) {
+      if (server.type === MCPServerType.Local) {
+        mcpServers[server.mcpServerUniqueId] = {
+          command: server.command as "npx" | "uvx" | "npm",
+          args: (server.args as string[]) || []
+        }
+      } else if (server.type === MCPServerType.Remote) {
+        mcpServers[server.mcpServerUniqueId] = {
+          type: server.remoteServerType === RemoteServerType.sse ? 'sse' : 'streamable-http',
+          url: server.url!,
+          ...(server.headers ? { headers: server.headers as Record<string, string> } : {})
+        }
+      }
+    }
+
+    return { mcpServers }
+  }
+
+  static async getAllServersWithMetadata(userContext?: UserContext): Promise<MCPServer[]> {
+    const servers = await prisma.mcpServer.findMany({
+      where: this.getAuthorizationFilter(userContext),
+      orderBy: { name: 'asc' },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true }
+        }
+      }
+    })
+
+    return servers.map(server => ({
+      id: server.id,
+      name: server.name,
+      uniqueId: server.mcpServerUniqueId,
+      shareWithWorkspace: server.shareWithWorkspace,
+      userId: server.userId,
       config: server.type === MCPServerType.Local
         ? {
             command: server.command as "npx" | "uvx" | "npm",
@@ -94,15 +186,93 @@ export class MCPService {
     }))
   }
 
-  static async getServerByName(name: string) {
-    return await prisma.mcpServer.findUnique({
-      where: { name }
+  static async getServerByName(name: string, userContext?: UserContext) {
+    return await prisma.mcpServer.findFirst({
+      where: { 
+        name,
+        ...this.getAuthorizationFilter(userContext)
+      }
     })
   }
 
-  static async getServerByUniqueId(uniqueId: string): Promise<MCPServer | null> {
+  static async getServerById(id: string, userContext?: UserContext) {
+    return await prisma.mcpServer.findFirst({
+      where: { 
+        id,
+        ...this.getAuthorizationFilter(userContext)
+      }
+    })
+  }
+
+  static async canUserModifyServer(serverId: string, userContext: UserContext): Promise<boolean> {
+    if (userContext.isAdmin) {
+      return true
+    }
+
     const server = await prisma.mcpServer.findUnique({
-      where: { mcpServerUniqueId: uniqueId }
+      where: { id: serverId },
+      select: { userId: true }
+    })
+
+    return server?.userId === userContext.userId
+  }
+
+  static async createServer(serverData: any, userContext: UserContext) {
+    // Add userId to server data
+    const data = {
+      ...serverData,
+      userId: userContext.userId
+    }
+
+    const server = await prisma.mcpServer.create({ data })
+    
+    // Restart MCPO after creating server
+    await this.restartMCPO()
+    
+    return server
+  }
+
+  static async updateServer(id: string, data: any, userContext: UserContext) {
+    // Check if user can modify this server
+    const canModify = await this.canUserModifyServer(id, userContext)
+    if (!canModify) {
+      throw new Error("Access denied: You can only modify your own servers")
+    }
+
+    const server = await prisma.mcpServer.update({
+      where: { id },
+      data
+    })
+
+    // Restart MCPO after updating server
+    await this.restartMCPO()
+
+    return server
+  }
+
+  static async deleteServer(id: string, userContext: UserContext) {
+    // Check if user can modify this server
+    const canModify = await this.canUserModifyServer(id, userContext)
+    if (!canModify) {
+      throw new Error("Access denied: You can only delete your own servers")
+    }
+
+    const server = await prisma.mcpServer.delete({
+      where: { id }
+    })
+
+    // Restart MCPO after deleting server
+    await this.restartMCPO()
+
+    return server
+  }
+
+  static async getServerByUniqueId(uniqueId: string, userContext?: UserContext): Promise<MCPServer | null> {
+    const server = await prisma.mcpServer.findFirst({
+      where: { 
+        mcpServerUniqueId: uniqueId,
+        ...this.getAuthorizationFilter(userContext)
+      }
     })
 
     if (!server) {
@@ -127,11 +297,17 @@ export class MCPService {
     }
   }
 
+  // Legacy method - redirects to new method with user context
   static async createServer(
     name: string, 
     config: MCPServerConfig, 
-    shareWithWorkspace: boolean = false
+    shareWithWorkspace: boolean = false,
+    userContext?: UserContext
   ): Promise<MCPServer> {
+    if (!userContext) {
+      throw new Error("User context is required for creating servers")
+    }
+    
     const isLocal = 'command' in config
     
     const server = await prisma.mcpServer.create({
@@ -139,6 +315,7 @@ export class MCPService {
         name,
         mcpServerUniqueId: '', // Will be updated after creation
         type: isLocal ? MCPServerType.Local : MCPServerType.Remote,
+        userId: userContext.userId, // Add user ownership
         command: isLocal ? config.command : null,
         args: isLocal ? config.args : undefined,
         remoteServerType: !isLocal ? (
@@ -167,25 +344,37 @@ export class MCPService {
       name: updatedServer.name,
       uniqueId: updatedServer.mcpServerUniqueId,
       shareWithWorkspace: updatedServer.shareWithWorkspace,
+      userId: updatedServer.userId,
       config
     }
   }
 
+  // Legacy method - redirects to new method with user context
   static async updateServer(
     uniqueId: string, 
     name: string, 
     config: MCPServerConfig, 
-    shareWithWorkspace: boolean = false
+    shareWithWorkspace: boolean = false,
+    userContext?: UserContext
   ): Promise<MCPServer> {
+    if (!userContext) {
+      throw new Error("User context is required for updating servers")
+    }
+
     const isLocal = 'command' in config
     
-    // Get the current server to check if name changed
+    // Get the current server to check if name changed and validate ownership
     const currentServer = await prisma.mcpServer.findUnique({
       where: { mcpServerUniqueId: uniqueId }
     })
 
     if (!currentServer) {
       throw new Error('Server not found')
+    }
+
+    // Check if user can modify this server
+    if (!userContext.isAdmin && currentServer.userId !== userContext.userId) {
+      throw new Error("Access denied: You can only modify your own servers")
     }
 
     let newUniqueId = uniqueId
@@ -221,11 +410,31 @@ export class MCPService {
       name: updatedServer.name,
       uniqueId: updatedServer.mcpServerUniqueId,
       shareWithWorkspace: updatedServer.shareWithWorkspace,
+      userId: updatedServer.userId,
       config
     }
   }
 
-  static async deleteServer(uniqueId: string) {
+  // Legacy method - redirects to new method with user context
+  static async deleteServer(uniqueId: string, userContext?: UserContext) {
+    if (!userContext) {
+      throw new Error("User context is required for deleting servers")
+    }
+
+    // Get the current server to validate ownership
+    const currentServer = await prisma.mcpServer.findUnique({
+      where: { mcpServerUniqueId: uniqueId }
+    })
+
+    if (!currentServer) {
+      throw new Error('Server not found')
+    }
+
+    // Check if user can modify this server
+    if (!userContext.isAdmin && currentServer.userId !== userContext.userId) {
+      throw new Error("Access denied: You can only delete your own servers")
+    }
+
     const result = await prisma.mcpServer.delete({
       where: { mcpServerUniqueId: uniqueId }
     })

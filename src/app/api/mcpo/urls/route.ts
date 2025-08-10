@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { adminMiddleware } from '@/lib/auth-middleware'
 import mcpoManager from '@/lib/mcpo-manager'
 
-export async function GET() {
+export const GET = adminMiddleware(async (request: NextRequest, userContext) => {
   try {
     const status = mcpoManager.getStatus()
     
@@ -62,4 +63,4 @@ export async function GET() {
       { status: 500 }
     )
   }
-}
+})
