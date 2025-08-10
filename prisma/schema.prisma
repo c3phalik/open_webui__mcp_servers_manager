@@ -88,6 +88,7 @@ model McpServer {
   // For Local (command) servers
   command            String? // "npx" or "uvx"
   args               Json? // Array of arguments
+  env                Json? // Environment variables (encrypted)
   // For Remote servers
   remoteServerType   RemoteServerType? @map("remote_server_type")
   url                String?

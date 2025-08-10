@@ -25,6 +25,7 @@ interface ServerWithMetadata {
   config: {
     command?: "npx" | "uvx" | "npm"
     args?: string[]
+    env?: Record<string, string>
     type?: "sse" | "streamable-http"
     url?: string
     headers?: Record<string, string>
@@ -40,12 +41,14 @@ interface MCPServerModalProps {
 }
 
 type HeaderKV = { key: string; value: string }
+type EnvVarKV = { key: string; value: string }
 
 type LocalForm = {
   kind: "local"
   name: string
   command: "npx" | "uvx" | "npm"
   argsText: string
+  envVars: EnvVarKV[]
 }
 
 type UrlForm = {
@@ -101,6 +104,7 @@ export function MCPServerModal({ open, onOpenChange, mode, server, onSuccess }: 
     name: "",
     command: "npx",
     argsText: "",
+    envVars: [],
   })
 
   // Initialize form when server data changes (for edit mode)
@@ -109,12 +113,16 @@ export function MCPServerModal({ open, onOpenChange, mode, server, onSuccess }: 
       setShareWithWorkspace(server.shareWithWorkspace)
       
       if (server.config.command && server.config.args) {
-        // Local server
+        // Local server - convert env vars to key-value pairs for editing
+        const envVars = server.config.env ? 
+          Object.entries(server.config.env).map(([key, value]) => ({ key, value })) : []
+        
         setForm({
           kind: "local",
           name: server.name,
           command: server.config.command,
-          argsText: argsToText(server.config.args)
+          argsText: argsToText(server.config.args),
+          envVars
         })
       } else if (server.config.url) {
         // Remote server
@@ -134,6 +142,7 @@ export function MCPServerModal({ open, onOpenChange, mode, server, onSuccess }: 
         name: "",
         command: "npx",
         argsText: "",
+        envVars: [],
       })
       setShareWithWorkspace(false)
     }
@@ -146,6 +155,7 @@ export function MCPServerModal({ open, onOpenChange, mode, server, onSuccess }: 
       let config: {
         command?: "npx" | "uvx" | "npm"
         args?: string[]
+        env?: Record<string, string>
         type?: "sse" | "streamable-http"
         url?: string
         headers?: Record<string, string>
@@ -153,7 +163,10 @@ export function MCPServerModal({ open, onOpenChange, mode, server, onSuccess }: 
       if (form.kind === "local") {
         config = {
           command: form.command,
-          args: textToArgs(form.argsText)
+          args: textToArgs(form.argsText),
+          env: Object.fromEntries(
+            form.envVars.filter(ev => ev.key.trim() && ev.value.trim()).map(ev => [ev.key, ev.value])
+          )
         }
       } else {
         config = {
@@ -238,6 +251,32 @@ export function MCPServerModal({ open, onOpenChange, mode, server, onSuccess }: 
     }
   }
 
+  const addEnvVar = () => {
+    if (form.kind === "local") {
+      setForm({
+        ...form,
+        envVars: [...form.envVars, { key: "", value: "" }]
+      })
+    }
+  }
+
+  const removeEnvVar = (index: number) => {
+    if (form.kind === "local") {
+      setForm({
+        ...form,
+        envVars: form.envVars.filter((_, i) => i !== index)
+      })
+    }
+  }
+
+  const updateEnvVar = (index: number, field: 'key' | 'value', value: string) => {
+    if (form.kind === "local") {
+      const newEnvVars = [...form.envVars]
+      newEnvVars[index] = { ...newEnvVars[index], [field]: value }
+      setForm({ ...form, envVars: newEnvVars })
+    }
+  }
+
   const isFormValid = () => {
     if (!form.name.trim()) return false
     
@@ -283,7 +322,8 @@ export function MCPServerModal({ open, onOpenChange, mode, server, onSuccess }: 
                   kind: "local",
                   name: form.name,
                   command: "npx",
-                  argsText: ""
+                  argsText: "",
+                  envVars: []
                 })
               } else {
                 setForm({
@@ -341,6 +381,44 @@ export function MCPServerModal({ open, onOpenChange, mode, server, onSuccess }: 
                     }
                   }}
                 />
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Environment Variables</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addEnvVar}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Variable
+                  </Button>
+                </div>
+
+                {form.kind === "local" && form.envVars.map((envVar, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <Input
+                      placeholder="VARIABLE_NAME"
+                      value={envVar.key}
+                      onChange={(e) => updateEnvVar(index, 'key', e.target.value)}
+                    />
+                    <Input
+                      placeholder="variable value"
+                      value={envVar.value}
+                      onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeEnvVar(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             </TabsContent>
 

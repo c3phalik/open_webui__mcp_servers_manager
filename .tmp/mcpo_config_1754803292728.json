@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "clickup-mcp-saif-9b32151f": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@taazkareem/clickup-mcp-server@latest"
+      ],
+      "env": {
+        "CLICKUP_API_KEY": "pk_3522386_42UAF1D0HRW9FSW9YERTYK0LRYDN3TD8",
+        "CLICKUP_TEAM_ID": "90161102945"
+      }
+    },
+    "create-doc-7cf99488": {
+      "type": "sse",
+      "url": "https://flows.insurge.dev/mcp/724d5749-2d43-416f-8b79-54ef1b70bb88/sse",
+      "headers": {}
+    },
+    "saifinsurgeio-gmail-cdfe829b": {
+      "type": "sse",
+      "url": "https://flows.insurge.dev/mcp/ade8f725-da1e-4154-b388-c1cf3d89fd20/sse",
+      "headers": {}
+    },
+    "time-server-359904e8": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-time"
+      ]
+    }
+  }
+}

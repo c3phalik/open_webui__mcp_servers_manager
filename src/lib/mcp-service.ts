@@ -1,6 +1,7 @@
 import { prisma } from './prisma'
 import { MCPServerType, RemoteServerType } from '@prisma/client'
 import { generateUniqueId } from './slug-utils'
+import { encryptEnvVars, decryptEnvVars, maskEnvVars } from './crypto-utils'
 
 // Dynamic import to avoid circular dependency
 const getMCPOManager = async () => {
@@ -12,6 +13,7 @@ export type MCPServerConfig =
   | {
       command: "npx" | "uvx" | "npm"
       args: string[]
+      env?: Record<string, string>
     }
   | {
       type: 'sse' | 'streamable-http'
@@ -86,9 +88,13 @@ export class MCPService {
 
     for (const server of servers) {
       if (server.type === MCPServerType.Local) {
+        // Decrypt environment variables for config generation
+        const decryptedEnv = server.env ? decryptEnvVars(server.env as string) : null
+        
         mcpServers[server.mcpServerUniqueId] = {
           command: server.command as "npx" | "uvx" | "npm",
-          args: (server.args as string[]) || []
+          args: (server.args as string[]) || [],
+          ...(decryptedEnv && Object.keys(decryptedEnv).length > 0 ? { env: decryptedEnv } : {})
         }
       } else if (server.type === MCPServerType.Remote) {
         mcpServers[server.mcpServerUniqueId] = {
@@ -113,21 +119,36 @@ export class MCPService {
       }
     })
 
-    return servers.map(server => ({
-      id: server.id,
-      name: server.name,
-      uniqueId: server.mcpServerUniqueId,
-      shareWithWorkspace: server.shareWithWorkspace,
-      userId: server.userId,
-      config: server.type === MCPServerType.Local ? {
-        command: server.command as "npx" | "uvx" | "npm",
-        args: (server.args as string[]) || []
-      } : {
-        type: server.remoteServerType === RemoteServerType.sse ? 'sse' : 'streamable-http',
-        url: server.url!,
-        ...(server.headers ? { headers: server.headers as Record<string, string> } : {})
+    return servers.map(server => {
+      let config: MCPServerConfig
+      
+      if (server.type === MCPServerType.Local) {
+        // Decrypt env vars then mask them for display
+        const decryptedEnv = server.env ? decryptEnvVars(server.env as string) : null
+        const maskedEnv = decryptedEnv ? maskEnvVars(decryptedEnv) : null
+        
+        config = {
+          command: server.command as "npx" | "uvx" | "npm",
+          args: (server.args as string[]) || [],
+          ...(maskedEnv && Object.keys(maskedEnv).length > 0 ? { env: maskedEnv } : {})
+        }
+      } else {
+        config = {
+          type: server.remoteServerType === RemoteServerType.sse ? 'sse' : 'streamable-http',
+          url: server.url!,
+          ...(server.headers ? { headers: server.headers as Record<string, string> } : {})
+        }
       }
-    }))
+      
+      return {
+        id: server.id,
+        name: server.name,
+        uniqueId: server.mcpServerUniqueId,
+        shareWithWorkspace: server.shareWithWorkspace,
+        userId: server.userId,
+        config
+      }
+    })
   }
 
   static async getAllServers(userContext?: UserContext): Promise<MCPServersConfig> {
@@ -140,9 +161,13 @@ export class MCPService {
 
     for (const server of servers) {
       if (server.type === MCPServerType.Local) {
+        // Decrypt environment variables for config generation
+        const decryptedEnv = server.env ? decryptEnvVars(server.env as string) : null
+        
         mcpServers[server.mcpServerUniqueId] = {
           command: server.command as "npx" | "uvx" | "npm",
-          args: (server.args as string[]) || []
+          args: (server.args as string[]) || [],
+          ...(decryptedEnv && Object.keys(decryptedEnv).length > 0 ? { env: decryptedEnv } : {})
         }
       } else if (server.type === MCPServerType.Remote) {
         mcpServers[server.mcpServerUniqueId] = {
@@ -167,23 +192,36 @@ export class MCPService {
       }
     })
 
-    return servers.map(server => ({
-      id: server.id,
-      name: server.name,
-      uniqueId: server.mcpServerUniqueId,
-      shareWithWorkspace: server.shareWithWorkspace,
-      userId: server.userId,
-      config: server.type === MCPServerType.Local
-        ? {
-            command: server.command as "npx" | "uvx" | "npm",
-            args: (server.args as string[]) || []
-          }
-        : {
-            type: server.remoteServerType === RemoteServerType.sse ? 'sse' : 'streamable-http',
-            url: server.url!,
-            ...(server.headers ? { headers: server.headers as Record<string, string> } : {})
-          }
-    }))
+    return servers.map(server => {
+      let config: MCPServerConfig
+      
+      if (server.type === MCPServerType.Local) {
+        // Decrypt env vars then mask them for display
+        const decryptedEnv = server.env ? decryptEnvVars(server.env as string) : null
+        const maskedEnv = decryptedEnv ? maskEnvVars(decryptedEnv) : null
+        
+        config = {
+          command: server.command as "npx" | "uvx" | "npm",
+          args: (server.args as string[]) || [],
+          ...(maskedEnv && Object.keys(maskedEnv).length > 0 ? { env: maskedEnv } : {})
+        }
+      } else {
+        config = {
+          type: server.remoteServerType === RemoteServerType.sse ? 'sse' : 'streamable-http',
+          url: server.url!,
+          ...(server.headers ? { headers: server.headers as Record<string, string> } : {})
+        }
+      }
+      
+      return {
+        id: server.id,
+        name: server.name,
+        uniqueId: server.mcpServerUniqueId,
+        shareWithWorkspace: server.shareWithWorkspace,
+        userId: server.userId,
+        config
+      }
+    })
   }
 
   static async getServerByName(name: string, userContext?: UserContext) {
@@ -265,22 +303,33 @@ export class MCPService {
       return null
     }
 
+    let config: MCPServerConfig
+    
+    if (server.type === MCPServerType.Local) {
+      // Decrypt env vars then mask them for display
+      const decryptedEnv = server.env ? decryptEnvVars(server.env as string) : null
+      const maskedEnv = decryptedEnv ? maskEnvVars(decryptedEnv) : null
+      
+      config = {
+        command: server.command as "npx" | "uvx" | "npm",
+        args: (server.args as string[]) || [],
+        ...(maskedEnv && Object.keys(maskedEnv).length > 0 ? { env: maskedEnv } : {})
+      }
+    } else {
+      config = {
+        type: server.remoteServerType === RemoteServerType.sse ? 'sse' : 'streamable-http',
+        url: server.url!,
+        ...(server.headers ? { headers: server.headers as Record<string, string> } : {})
+      }
+    }
+
     return {
       id: server.id,
       name: server.name,
       uniqueId: server.mcpServerUniqueId,
       shareWithWorkspace: server.shareWithWorkspace,
       userId: server.userId,
-      config: server.type === MCPServerType.Local
-        ? {
-            command: server.command as "npx" | "uvx" | "npm",
-            args: (server.args as string[]) || []
-          }
-        : {
-            type: server.remoteServerType === RemoteServerType.sse ? 'sse' : 'streamable-http',
-            url: server.url!,
-            ...(server.headers ? { headers: server.headers as Record<string, string> } : {})
-          }
+      config
     }
   }
 
@@ -297,6 +346,12 @@ export class MCPService {
     
     const isLocal = 'command' in config
     
+    // Encrypt environment variables if present for local servers
+    let encryptedEnv: string | undefined = undefined
+    if (isLocal && config.env && Object.keys(config.env).length > 0) {
+      encryptedEnv = encryptEnvVars(config.env) || undefined
+    }
+    
     const server = await prisma.mcpServer.create({
       data: {
         name,
@@ -305,6 +360,7 @@ export class MCPService {
         userId: userContext.userId, // Add user ownership
         command: isLocal ? config.command : null,
         args: isLocal ? config.args : undefined,
+        env: encryptedEnv,
         remoteServerType: !isLocal ? (
           config.type === 'sse' 
             ? RemoteServerType.sse 
@@ -370,6 +426,12 @@ export class MCPService {
       newUniqueId = generateUniqueId(name, currentServer.id)
     }
     
+    // Encrypt environment variables if present for local servers
+    let encryptedEnv: string | undefined = undefined
+    if (isLocal && config.env && Object.keys(config.env).length > 0) {
+      encryptedEnv = encryptEnvVars(config.env) || undefined
+    }
+    
     const updatedServer = await prisma.mcpServer.update({
       where: { mcpServerUniqueId: uniqueId },
       data: {
@@ -378,6 +440,7 @@ export class MCPService {
         type: isLocal ? MCPServerType.Local : MCPServerType.Remote,
         command: isLocal ? config.command : null,
         args: isLocal ? config.args : undefined,
+        env: encryptedEnv,
         remoteServerType: !isLocal ? (
           config.type === 'sse' 
             ? RemoteServerType.sse 

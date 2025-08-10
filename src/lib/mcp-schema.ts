@@ -5,6 +5,7 @@ const localCommandSchema = z.object({
     message: "command must be one of npx, uvx, or npm",
   }),
   args: z.array(z.string()).default([]),
+  env: z.record(z.string(), z.string()).optional(),
 })
 
 const urlServerSchema = z.object({

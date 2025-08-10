@@ -9,6 +9,12 @@
       "type": "sse",
       "url": "https://flows.insurge.dev/mcp/ade8f725-da1e-4154-b388-c1cf3d89fd20/sse",
       "headers": {}
+    },
+    "time-server-359904e8": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-time"
+      ]
     }
   }
 }

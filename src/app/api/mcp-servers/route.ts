@@ -9,11 +9,12 @@ const createServerSchema = z.object({
   config: z.union([
     z.object({
       command: z.enum(["npx", "uvx", "npm"]),
-      args: z.array(z.string())
+      args: z.array(z.string()),
+      env: z.record(z.string(), z.string()).optional()
     }),
     z.object({
       type: z.enum(['sse', 'streamable-http']),
-      url: z.string().url(),
+      url: z.string().min(1, "URL is required"),
       headers: z.record(z.string(), z.string()).optional()
     })
   ]),
@@ -26,11 +27,12 @@ const updateServerSchema = z.object({
   config: z.union([
     z.object({
       command: z.enum(["npx", "uvx", "npm"]),
-      args: z.array(z.string())
+      args: z.array(z.string()),
+      env: z.record(z.string(), z.string()).optional()
     }),
     z.object({
       type: z.enum(['sse', 'streamable-http']),
-      url: z.string().url(),
+      url: z.string().min(1, "URL is required"),
       headers: z.record(z.string(), z.string()).optional()
     })
   ]),
