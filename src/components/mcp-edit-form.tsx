@@ -91,7 +91,7 @@ export default function MCPEditForm({
       return {
         kind: "local",
         name,
-        command: config.command,
+        command: (config.command as "npx" | "uvx" | "npm") || "uvx",
         argsText: (config.args ?? []).join(" "),
       }
     }
@@ -191,7 +191,7 @@ export default function MCPEditForm({
     }
     
     // Build config object
-    let config: { command: string; args: string[] } | { type: string; url: string; headers?: Record<string, string> }
+    let config: { command: "uvx" | "npx" | "npm"; args: string[] } | { type: "sse" | "streamable-http"; url: string; headers?: Record<string, string> }
     if (form.kind === "local") {
       config = {
         command: form.command,

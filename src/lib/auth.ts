@@ -27,7 +27,7 @@ export const auth = betterAuth({
     })
   ],
   hooks: {
-    after: createAuthMiddleware(async (ctx: any) => {
+    after: createAuthMiddleware(async (ctx: { path: string; context: { newSession?: { user: { id: string; email: string } } } }) => {
       // Check if this is a user signup
       if (ctx.path === "/sign-up/email" && ctx.context.newSession) {
         try {

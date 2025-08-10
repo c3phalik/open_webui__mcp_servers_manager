@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { adminMiddleware } from '@/lib/auth-middleware'
 import mcpoManager, { StatusChange } from '@/lib/mcpo-manager'
 
@@ -85,5 +85,5 @@ export const GET = adminMiddleware(async (request: NextRequest, userContext) => 
     }
   })
 
-  return new Response(stream, { headers })
+  return new NextResponse(stream, { headers })
 })

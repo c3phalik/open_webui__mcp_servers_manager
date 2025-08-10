@@ -273,7 +273,7 @@ class MCPOManager {
     }
   }
 
-  async validateServers(servers: any[]): Promise<ValidationResult> {
+  async validateServers(servers: Array<{ uniqueId?: string; name: string; config: Record<string, unknown> }>): Promise<ValidationResult> {
     const errors: Array<{ server: string; error: string }> = []
     const validServers: string[] = []
     const invalidServers: string[] = []
@@ -309,13 +309,13 @@ class MCPOManager {
           // Remote server validation
           const { type, url } = server.config
           
-          if (!['sse', 'streamable-http'].includes(type)) {
+          if (typeof type !== 'string' || !['sse', 'streamable-http'].includes(type)) {
             errors.push({ server: serverName, error: `Invalid type: ${type}` })
             invalidServers.push(serverName)
             continue
           }
           
-          if (!url || !url.startsWith('http')) {
+          if (typeof url !== 'string' || !url || !url.startsWith('http')) {
             errors.push({ server: serverName, error: `Invalid URL: ${url}` })
             invalidServers.push(serverName)
             continue

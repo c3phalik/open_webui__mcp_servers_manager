@@ -63,7 +63,7 @@ import MCPOStatusCompact from "./mcpo-status-compact"
 import { MCPServerModal } from "./mcp-server-modal"
 
 interface ServerConfig {
-  command?: string
+  command?: "npx" | "uvx" | "npm"
   args?: string[]
   type?: 'sse' | 'streamable-http'
   url?: string
@@ -721,7 +721,7 @@ export default function ServersList({}: Props) {
                       </p>
                       <p className="text-sm text-red-700">
                         You are about to permanently delete the MCP server{' '}
-                        <span className="font-medium">"{serverToDelete.name}"</span>
+                        <span className="font-medium">&ldquo;{serverToDelete.name}&rdquo;</span>
                       </p>
                     </div>
                   </div>

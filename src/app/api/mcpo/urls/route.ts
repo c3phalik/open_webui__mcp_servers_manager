@@ -21,7 +21,7 @@ export const GET = adminMiddleware(async (request: NextRequest, userContext) => 
     const validServers = mcpoManager.getValidServers()
     
     // Generate URLs for each valid server
-    const serverUrls: { [key: string]: any } = {}
+    const serverUrls: { [key: string]: { serverId: string; baseUrl: string; docsUrl: string; openApiUrl: string; schemaUrl: string } } = {}
     
     for (const serverId of validServers) {
       serverUrls[serverId] = {

@@ -89,10 +89,10 @@ export function adminMiddleware(handler: (req: NextRequest, userContext: UserCon
 }
 
 // Middleware for dynamic routes that need both userContext and route params
-export function adminRouteMiddleware<T = any>(
-  handler: (req: NextRequest, context: { params: T }, userContext: UserContext) => Promise<NextResponse>
+export function adminRouteMiddleware<T = Record<string, string>>(
+  handler: (req: NextRequest, context: { params: Promise<T> }, userContext: UserContext) => Promise<NextResponse>
 ) {
-  return async (req: NextRequest, context: { params: T }) => {
+  return async (req: NextRequest, context: { params: Promise<T> }) => {
     try {
       const userContext = await requireAdmin()
       return handler(req, context, userContext)

@@ -217,22 +217,8 @@ export class MCPService {
     return server?.userId === userContext.userId
   }
 
-  static async createServer(serverData: any, userContext: UserContext) {
-    // Add userId to server data
-    const data = {
-      ...serverData,
-      userId: userContext.userId
-    }
 
-    const server = await prisma.mcpServer.create({ data })
-    
-    // Restart MCPO after creating server
-    await this.restartMCPO()
-    
-    return server
-  }
-
-  static async updateServer(id: string, data: any, userContext: UserContext) {
+  static async updateServerWithMetadata(id: string, data: { name?: string; uniqueId?: string; shareWithWorkspace?: boolean; config?: Record<string, unknown> }, userContext: UserContext) {
     // Check if user can modify this server
     const canModify = await this.canUserModifyServer(id, userContext)
     if (!canModify) {
@@ -250,7 +236,7 @@ export class MCPService {
     return server
   }
 
-  static async deleteServer(id: string, userContext: UserContext) {
+  static async deleteServerWithAuth(id: string, userContext: UserContext) {
     // Check if user can modify this server
     const canModify = await this.canUserModifyServer(id, userContext)
     if (!canModify) {
@@ -284,6 +270,7 @@ export class MCPService {
       name: server.name,
       uniqueId: server.mcpServerUniqueId,
       shareWithWorkspace: server.shareWithWorkspace,
+      userId: server.userId,
       config: server.type === MCPServerType.Local
         ? {
             command: server.command as "npx" | "uvx" | "npm",
@@ -468,6 +455,7 @@ export class MCPService {
             name,
             mcpServerUniqueId: '', // Will be updated
             type: isLocal ? MCPServerType.Local : MCPServerType.Remote,
+            userId: '', // Legacy function - userId should be provided
             command: isLocal ? serverConfig.command : null,
             args: isLocal ? serverConfig.args : undefined,
             remoteServerType: !isLocal ? (

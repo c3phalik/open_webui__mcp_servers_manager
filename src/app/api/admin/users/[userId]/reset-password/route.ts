@@ -5,9 +5,9 @@ import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 
 interface RouteContext {
-  params: {
+  params: Promise<{
     userId: string
-  }
+  }>
 }
 
 export const POST = adminRouteMiddleware(async (request: NextRequest, context: RouteContext, userContext) => {

@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminMiddleware } from '@/lib/auth-middleware'
+import { adminRouteMiddleware } from '@/lib/auth-middleware'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 
 const execAsync = promisify(exec)
 
-export const DELETE = adminMiddleware(async (request: NextRequest, { params }: { params: { pid: string } }) => {
+export const DELETE = adminRouteMiddleware(async (request: NextRequest, { params }: { params: Promise<{ pid: string }> }, userContext) => {
+  const { pid: pidStr } = await params
+  
   try {
-    const pid = parseInt(params.pid)
+    const pid = parseInt(pidStr)
     
     if (isNaN(pid) || pid <= 0) {
       return NextResponse.json(
         {
           success: false,
           error: 'Invalid PID provided',
-          message: `PID must be a positive integer, got: ${params.pid}`
+          message: `PID must be a positive integer, got: ${pidStr}`
         },
         { status: 400 }
       )
@@ -80,7 +82,7 @@ export const DELETE = adminMiddleware(async (request: NextRequest, { params }: {
     })
     
   } catch (error) {
-    console.error(`Error killing process ${params.pid}:`, error)
+    console.error(`Error killing process ${pidStr}:`, error)
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     
@@ -88,7 +90,7 @@ export const DELETE = adminMiddleware(async (request: NextRequest, { params }: {
       {
         success: false,
         error: errorMessage,
-        message: `Failed to kill process ${params.pid}`
+        message: `Failed to kill process ${pidStr}`
       },
       { status: 500 }
     )

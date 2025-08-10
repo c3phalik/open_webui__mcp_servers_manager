@@ -140,7 +140,6 @@ export function UserManagementModal({
     setIsLoading(true)
     
     try {
-      let response: Response
       let endpoint = ''
       let method = ''
       let body: Record<string, unknown> = {}
@@ -178,7 +177,7 @@ export function UserManagementModal({
           break
       }
 
-      response = await fetch(endpoint, {
+      const response = await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)

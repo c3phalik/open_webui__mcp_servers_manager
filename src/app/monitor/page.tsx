@@ -53,8 +53,8 @@ interface MCPOMonitorData {
   servers: {
     totalValid: number
     totalInvalid: number
-    validServersList: any[]
-    invalidServersDetails: any[]
+    validServersList: string[]
+    invalidServersDetails: Array<{ server: string; error: string }>
   }
   errors: {
     lastError: string | null
@@ -169,9 +169,9 @@ export default function MonitorPage() {
           } else {
             // Transform flat structure to nested structure
             const transformedData = {
-              healthStatus: flatData.status === 'running' && flatData.validServers > 0 && !flatData.lastError ? 'healthy' :
+              healthStatus: (flatData.status === 'running' && flatData.validServers > 0 && !flatData.lastError ? 'healthy' :
                            flatData.status === 'running' && flatData.validServers > 0 ? 'running_with_issues' :
-                           'unhealthy',
+                           'unhealthy') as 'healthy' | 'running_with_issues' | 'unhealthy',
               timestamp: new Date().toISOString(),
               process: {
                 status: flatData.status,

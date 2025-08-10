@@ -11,12 +11,11 @@ export async function ensureFirstUserIsAdmin() {
       // Get the first (and only) user
       const firstUser = await prisma.user.findFirst()
       
-      if (firstUser && !firstUser.isAdmin && firstUser.role !== 'admin') {
+      if (firstUser && firstUser.role !== 'admin') {
         // Make them an admin using both fields for compatibility
         await prisma.user.update({
           where: { id: firstUser.id },
           data: { 
-            isAdmin: true,
             role: 'admin' 
           }
         })
