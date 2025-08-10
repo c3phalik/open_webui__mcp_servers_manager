@@ -15,12 +15,14 @@ interface User {
 interface SessionContextType {
   user: User | null
   isLoading: boolean
+  isCheckingAdmin: boolean
   isAdmin: boolean
 }
 
 const SessionContext = createContext<SessionContextType>({
   user: null,
   isLoading: true,
+  isCheckingAdmin: false,
   isAdmin: false
 })
 
@@ -28,19 +30,26 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const { data: session, isPending } = useSession()
   const [isAdmin, setIsAdmin] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(false)
 
   useEffect(() => {
     if (!isPending) {
       setIsLoading(false)
       if (session?.user) {
-        // Check if user is admin by checking organization membership
+        // Start admin check
+        setIsCheckingAdmin(true)
         checkAdminStatus(session.user.id)
+      } else {
+        // No user, reset admin state
+        setIsAdmin(false)
+        setIsCheckingAdmin(false)
       }
     }
   }, [session, isPending])
 
   const checkAdminStatus = async (userId: string) => {
     try {
+      console.log('Checking admin status for user:', userId)
       const response = await fetch('/api/auth/check-admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -48,10 +57,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       })
       if (response.ok) {
         const { isAdmin } = await response.json()
+        console.log('Admin status check result:', isAdmin)
         setIsAdmin(isAdmin)
+      } else {
+        console.error('Admin status check failed with status:', response.status)
       }
     } catch (error) {
       console.error('Failed to check admin status:', error)
+    } finally {
+      setIsCheckingAdmin(false)
     }
   }
 
@@ -60,6 +74,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       value={{
         user: session?.user || null,
         isLoading: isLoading,
+        isCheckingAdmin: isCheckingAdmin,
         isAdmin
       }}
     >
@@ -90,18 +105,29 @@ export function useRequireAuth() {
 }
 
 export function useRequireAdmin() {
-  const { user, isLoading, isAdmin } = useAuth()
+  const { user, isLoading, isCheckingAdmin, isAdmin } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading) {
+    // Wait for both session loading AND admin check to complete
+    const isFullyLoaded = !isLoading && !isCheckingAdmin
+    
+    if (isFullyLoaded) {
+      console.log('Admin check complete - user:', !!user, 'isAdmin:', isAdmin)
+      
       if (!user) {
+        console.log('No user found, redirecting to login')
         router.push("/login")
       } else if (!isAdmin) {
+        console.log('User is not admin, redirecting to homepage')
         router.push("/") // Redirect non-admins to homepage
+      } else {
+        console.log('User is admin, access granted')
       }
+    } else {
+      console.log('Still loading - session loading:', isLoading, 'admin checking:', isCheckingAdmin)
     }
-  }, [user, isLoading, isAdmin, router])
+  }, [user, isLoading, isCheckingAdmin, isAdmin, router])
 
-  return { user, isLoading, isAdmin }
+  return { user, isLoading: isLoading || isCheckingAdmin, isAdmin }
 }

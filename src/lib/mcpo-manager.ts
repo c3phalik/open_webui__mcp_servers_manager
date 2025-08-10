@@ -118,7 +118,7 @@ class MCPOManager {
         'mcpo',
         '--config', configPath,
         '--api-key', mcpoApiKey,
-        '--port', process.env.MCPO_PORT || '8001',
+        '--port', this.getMcpoPort(),
       ]
 
       this.log(`Starting MCPO: ${command} ${args.join(' ')}`)
@@ -145,7 +145,7 @@ class MCPOManager {
 
       this.startTime = new Date()
       this.setStatus('running', `MCPO started with PID ${this.process.pid}`)
-      this.log(`MCPO is running on http://localhost:8001`)
+      this.log(`MCPO is running on http://localhost:${this.getMcpoPort()}`)
 
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
@@ -425,7 +425,7 @@ class MCPOManager {
       invalidServers: Object.keys(this.invalidServers).length,
       recentLogs: this.logs.getLast(50),
       statusHistory: this.statusHistory.getLast(20),
-      mcpoUrl: this.status === 'running' ? 'http://localhost:8001' : '',
+      mcpoUrl: this.status === 'running' ? `http://localhost:${this.getMcpoPort()}` : '',
       configFile: this.configFile,
       lastError: this.lastError
     }
@@ -516,6 +516,15 @@ class MCPOManager {
     } catch (err) {
       this.log(`Warning: Could not cleanup old config files: ${err}`, 'error')
     }
+  }
+
+  // Get MCPO port from environment with validation
+  private getMcpoPort(): string {
+    const port = process.env.NEXT_PUBLIC_MCPO_PORT
+    if (!port) {
+      throw new Error('NEXT_PUBLIC_MCPO_PORT environment variable is required but not set. Please set NEXT_PUBLIC_MCPO_PORT in your environment (e.g., NEXT_PUBLIC_MCPO_PORT=8000)')
+    }
+    return port
   }
 
   // Cleanup method

@@ -137,7 +137,11 @@ export default function ServersList({}: Props) {
 
   const copyServerUrl = (server: ServerWithMetadata) => {
     // Get MCPO URL from environment or default
-    const mcpoUrl = process.env.NEXT_PUBLIC_MCPO_URL || `http://localhost:${process.env.NEXT_PUBLIC_MCPO_PORT || 8000}`
+    const mcpoUrl = `${process.env.NEXT_PUBLIC_URL}:${process.env.NEXT_PUBLIC_MCPO_PORT}`
+    console.log("MCPO PORT", process.env.NEXT_PUBLIC_MCPO_PORT)
+
+    const mcpoDocsUrl = `${mcpoUrl}/docs`
+    const mcpoOpenApiUrl = `${mcpoUrl}/openapi.json`
     const serverUrl = `${mcpoUrl}/${server.uniqueId}`
     navigator.clipboard.writeText(serverUrl)
     setCopiedItem(`url-${server.uniqueId}`)

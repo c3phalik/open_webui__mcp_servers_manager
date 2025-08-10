@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "create-doc-7cf99488": {
+      "type": "sse",
+      "url": "https://flows.insurge.dev/mcp/724d5749-2d43-416f-8b79-54ef1b70bb88/sse",
+      "headers": {}
+    },
+    "saifinsurgeio-gmail-cdfe829b": {
+      "type": "sse",
+      "url": "https://flows.insurge.dev/mcp/ade8f725-da1e-4154-b388-c1cf3d89fd20/sse",
+      "headers": {}
+    }
+  }
+}
