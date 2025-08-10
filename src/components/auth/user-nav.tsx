@@ -1,8 +1,15 @@
 "use client"
 
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { LogOut, User, Shield } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { LogOut, ChevronDown } from 'lucide-react'
 import { useAuth } from './session-provider'
 import { signOut } from '@/lib/auth-client'
 
@@ -20,34 +27,39 @@ export function UserNav() {
     ? user.name.split(' ').map(n => n[0]).join('').toUpperCase()
     : user.email.slice(0, 2).toUpperCase()
 
+  const displayName = user.name || user.email
+  const email = user.email
+
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-2">
-        <Avatar className="h-8 w-8">
-          <AvatarFallback className="text-xs font-medium">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex flex-col">
-          <span className="text-sm font-medium">
-            {user.name || user.email}
-          </span>
-          {isAdmin && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Shield className="h-3 w-3" />
-              Admin
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="relative h-10 px-4 hover:bg-muted/50">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-sm font-medium truncate max-w-[150px]">
+                {displayName}
+              </span>
+              {isAdmin && (
+                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                  Admin
+                </Badge>
+              )}
             </div>
-          )}
-        </div>
-      </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleSignOut}
-        className="h-8 px-2"
-      >
-        <LogOut className="h-4 w-4" />
-      </Button>
-    </div>
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={5} alignOffset={0}>
+        <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer">
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Sign out</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

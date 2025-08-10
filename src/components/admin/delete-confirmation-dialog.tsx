@@ -17,6 +17,9 @@ interface UserData {
   id: string
   email: string
   name?: string
+  role: string
+  emailVerified: boolean
+  createdAt: string
   _count: {
     mcpServers: number
   }

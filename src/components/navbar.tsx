@@ -5,7 +5,10 @@ import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Server, Activity, Users, Home } from 'lucide-react'
 import { UserNav } from './auth/user-nav'
+import { ThemeToggle } from './theme-toggle'
 import { useAuth } from './auth/session-provider'
+
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "MCP Manager" || "Untitled"
 
 export function Navbar() {
   const pathname = usePathname()
@@ -33,15 +36,15 @@ export function Navbar() {
               <div className="p-1.5 bg-primary/10 rounded-md">
                 <Server className="h-5 w-5 text-primary" />
               </div>
-              <span className="font-semibold text-lg">MCP Manager</span>
+              <span className="font-semibold text-lg">{APP_NAME}</span>
             </Link>
 
             <div className="hidden md:flex items-center gap-1">
               <Button
-                variant={isActive('/') ? "default" : "ghost"}
+                variant="ghost"
                 size="sm"
                 asChild
-                className="gap-2"
+                className={`gap-2 ${isActive('/') ? 'bg-muted/70 text-foreground' : 'hover:bg-muted/50'}`}
               >
                 <Link href="/">
                   <Home className="h-4 w-4" />
@@ -52,10 +55,10 @@ export function Navbar() {
               {isAdmin && (
                 <>
                   <Button
-                    variant={isActive('/monitor') ? "default" : "ghost"}
+                    variant="ghost"
                     size="sm"
                     asChild
-                    className="gap-2"
+                    className={`gap-2 ${isActive('/monitor') ? 'bg-muted/70 text-foreground' : 'hover:bg-muted/50'}`}
                   >
                     <Link href="/monitor">
                       <Activity className="h-4 w-4" />
@@ -64,10 +67,10 @@ export function Navbar() {
                   </Button>
 
                   <Button
-                    variant={isActive('/admin') ? "default" : "ghost"}
+                    variant="ghost"
                     size="sm"
                     asChild
-                    className="gap-2"
+                    className={`gap-2 ${isActive('/admin') ? 'bg-muted/70 text-foreground' : 'hover:bg-muted/50'}`}
                   >
                     <Link href="/admin/users">
                       <Users className="h-4 w-4" />
@@ -86,18 +89,20 @@ export function Navbar() {
               {isAdmin && (
                 <div className="flex gap-1">
                   <Button
-                    variant={isActive('/monitor') ? "default" : "ghost"}
+                    variant="ghost"
                     size="sm"
                     asChild
+                    className={isActive('/monitor') ? 'bg-muted/70 text-foreground' : 'hover:bg-muted/50'}
                   >
                     <Link href="/monitor">
                       <Activity className="h-4 w-4" />
                     </Link>
                   </Button>
                   <Button
-                    variant={isActive('/admin') ? "default" : "ghost"}
+                    variant="ghost"
                     size="sm"
                     asChild
+                    className={isActive('/admin') ? 'bg-muted/70 text-foreground' : 'hover:bg-muted/50'}
                   >
                     <Link href="/admin/users">
                       <Users className="h-4 w-4" />
@@ -106,6 +111,7 @@ export function Navbar() {
                 </div>
               )}
             </div>
+            <ThemeToggle />
             <UserNav />
           </div>
         </div>

@@ -2,45 +2,21 @@
 
 import { useState, useEffect } from 'react'
 import { ProtectedRoute } from '@/components/auth/protected-route'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { 
-  Users, 
-  Search, 
-  Shield, 
-  User, 
-  Calendar,
-  Server,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  UserPlus,
-  Edit,
-  Key,
-  Trash2,
-  MoreVertical
-} from 'lucide-react'
+import { UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { UserManagementModal } from '@/components/admin/user-management-modal'
 import { DeleteConfirmationDialog } from '@/components/admin/delete-confirmation-dialog'
-import { PasswordDisplay } from '@/components/admin/password-display'
+import { UsersDataTable } from '@/components/admin/users-data-table'
 
 interface UserData {
   id: string
   email: string
   name?: string
-  isAdmin: boolean
+  role: string
   emailVerified: boolean
   createdAt: string
   _count: {
@@ -236,50 +212,22 @@ export default function AdminUsersPage() {
         <div className="container mx-auto max-w-7xl px-4 py-8">
           {/* Header */}
           <div className="mb-8">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Users className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                    User Management
-                  </h1>
-                  <p className="text-muted-foreground">
-                    Manage user roles and system settings
-                  </p>
-                </div>
-              </div>
-              
-              <Button 
-                onClick={openCreateModal}
-                className="gap-2"
-                size="lg"
-              >
-                <UserPlus className="h-4 w-4" />
-                Add User
-              </Button>
+            <div className="mb-6">
+              <h1 className="text-4xl font-bold tracking-tight">
+                User Management
+              </h1>
+              <p className="text-muted-foreground">
+                Manage user roles and system settings
+              </p>
             </div>
-          </div>
 
-          {/* System Settings */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                System Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="signup-enabled" className="text-base font-medium">
-                    Enable User Registration
-                  </Label>
-                  <div className="text-sm text-muted-foreground">
-                    Allow new users to create accounts
-                  </div>
-                </div>
+            {/* Controls Row */}
+            <div className="flex items-center justify-between gap-4">
+              {/* Settings Toggle */}
+              <div className="flex items-center gap-3">
+                <Label htmlFor="signup-enabled" className="text-sm font-medium whitespace-nowrap">
+                  Enable Registration
+                </Label>
                 <Switch
                   id="signup-enabled"
                   checked={settings.signupEnabled}
@@ -287,160 +235,34 @@ export default function AdminUsersPage() {
                   disabled={settingsLoading}
                 />
               </div>
-            </CardContent>
-          </Card>
+              
+              {/* Add User Button */}
+              <Button 
+                onClick={openCreateModal}
+                className="gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                Add User
+              </Button>
+            </div>
+          </div>
 
-          {/* Search */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Search users by email or name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Users Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Users ({pagination.total})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                  Loading users...
-                </div>
-              ) : users.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  {searchQuery ? 'No users found matching your search' : 'No users found'}
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    {users.map((user) => (
-                      <div
-                        key={user.id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                              <User className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{user.email}</span>
-                                {user.isAdmin && (
-                                  <Badge variant="default" className="gap-1">
-                                    <Shield className="h-3 w-3" />
-                                    Admin
-                                  </Badge>
-                                )}
-                                {!user.emailVerified && (
-                                  <Badge variant="outline">Unverified</Badge>
-                                )}
-                              </div>
-                              {user.name && (
-                                <p className="text-sm text-muted-foreground">{user.name}</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                          <div className="text-right text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Server className="h-3 w-3" />
-                              {user._count.mcpServers} servers
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {new Date(user.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                          
-                          {/* Password display for newly created/reset users */}
-                          {showPasswordFor === user.id && generatedPassword && (
-                            <div className="max-w-xs">
-                              <PasswordDisplay 
-                                password={generatedPassword}
-                                label="New Password"
-                                className="text-xs"
-                              />
-                            </div>
-                          )}
-                          
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem onClick={() => openEditModal(user)}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit User
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => openResetPasswordModal(user)}>
-                                <Key className="h-4 w-4 mr-2" />
-                                Reset Password
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => openDeleteDialog(user)}
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete User
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Pagination */}
-                  {pagination.pages > 1 && (
-                    <div className="flex items-center justify-between mt-6">
-                      <div className="text-sm text-muted-foreground">
-                        Page {pagination.page} of {pagination.pages} ({pagination.total} total)
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePageChange(pagination.page - 1)}
-                          disabled={pagination.page <= 1}
-                          className="gap-1"
-                        >
-                          <ChevronLeft className="h-3 w-3" />
-                          Previous
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePageChange(pagination.page + 1)}
-                          disabled={pagination.page >= pagination.pages}
-                          className="gap-1"
-                        >
-                          Next
-                          <ChevronRight className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-
+          {/* Users Data Table */}
+          
+              <UsersDataTable
+                data={users}
+                pagination={pagination}
+                onPageChange={handlePageChange}
+                onSearch={setSearchQuery}
+                searchQuery={searchQuery}
+                isLoading={isLoading}
+                onEditUser={openEditModal}
+                onResetPassword={openResetPasswordModal}
+                onDeleteUser={openDeleteDialog}
+                showPasswordFor={showPasswordFor}
+                generatedPassword={generatedPassword}
+              />
+          
           {/* Modals */}
           <UserManagementModal
             open={userModalOpen}

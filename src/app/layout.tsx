@@ -2,8 +2,10 @@ import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
+import './index.css'
 import { Toaster } from "sonner"
 import { SessionProvider } from '@/components/auth/session-provider'
+import { ThemeProvider } from '@/components/theme-provider'
 import { Navbar } from '@/components/navbar'
 
 export const metadata: Metadata = {
@@ -18,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <style>{`
 html {
@@ -29,13 +31,20 @@ html {
         `}</style>
       </head>
       <body>
-        <SessionProvider>
-          <Navbar />
-          <main>
-            {children}
-          </main>
-        </SessionProvider>
-        <Toaster richColors position="top-right" closeButton />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SessionProvider>
+            <Navbar />
+            <main>
+              {children}
+            </main>
+          </SessionProvider>
+          <Toaster richColors position="top-right" closeButton />
+        </ThemeProvider>
       </body>
     </html>
   )

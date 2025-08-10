@@ -20,7 +20,7 @@ interface UserData {
   id: string
   email: string
   name?: string
-  isAdmin: boolean
+  role: string
   emailVerified: boolean
   createdAt: string
   _count: {
@@ -59,7 +59,7 @@ export function UserManagementModal({
         setFormData({
           name: user.name || '',
           email: user.email,
-          isAdmin: user.isAdmin
+          isAdmin: user.role === 'admin'
         })
       } else {
         setFormData({
